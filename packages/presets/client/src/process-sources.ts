@@ -1,4 +1,4 @@
-import { OperationOrFragment, SourceWithOperations } from '@graphql-codegen/gql-tag-operations';
+import { OperationOrFragment, SourceWithOperations } from '@codelab-app/gql-tag-operations';
 import { Source } from '@graphql-tools/utils';
 import { FragmentDefinitionNode, OperationDefinitionNode } from 'graphql';
 

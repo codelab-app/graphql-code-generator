@@ -1,5 +1,5 @@
 import * as addPlugin from '@graphql-codegen/add';
-import * as gqlTagPlugin from '@graphql-codegen/gql-tag-operations';
+import * as gqlTagPlugin from '@codelab-app/gql-tag-operations';
 import type { PluginFunction, Types } from '@graphql-codegen/plugin-helpers';
 import * as typedDocumentNodePlugin from '@graphql-codegen/typed-document-node';
 import * as typescriptPlugin from '@graphql-codegen/typescript';

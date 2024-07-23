@@ -1,7 +1,8 @@
 import { PluginFunction } from '@graphql-codegen/plugin-helpers';
 import { DocumentMode } from '@graphql-codegen/visitor-plugin-common';
 import { Source } from '@graphql-tools/utils';
-import { FragmentDefinitionNode, OperationDefinitionNode } from 'graphql';
+import { FragmentDefinitionNode, OperationDefinitionNode, print } from 'graphql';
+import prettier from 'prettier'
 
 export type OperationOrFragment = {
   initialName: string;
@@ -55,7 +56,7 @@ export const plugin: PluginFunction<{
 
     if (sourcesWithOperations.length > 0) {
       code.push(
-        [...getGqlOverloadChunk(sourcesWithOperations, gqlTagName, 'augmented', emitLegacyCommonJSImports), `\n`].join(
+        [...getGqlOverloadChunk(sourcesWithOperations, gqlTagName, 'lookup', emitLegacyCommonJSImports), `\n`].join(
           ''
         )
       );
@@ -126,7 +127,7 @@ export const plugin: PluginFunction<{
     [
       `\n`,
       ...(sourcesWithOperations.length > 0
-        ? getGqlOverloadChunk(sourcesWithOperations, gqlTagName, 'augmented', emitLegacyCommonJSImports)
+        ? getGqlOverloadChunk(sourcesWithOperations, gqlTagName, 'lookup', emitLegacyCommonJSImports)
         : []),
       `export function ${gqlTagName}(source: string): unknown;\n`,
       `\n`,
@@ -149,11 +150,12 @@ function getDocumentRegistryChunk(sourcesWithOperations: Array<SourceWithOperati
   lines.add(` * Therefore it is highly recommended to use the babel or swc plugin for production.\n */\n`);
   lines.add(`const documents = {\n`);
 
-  for (const { operations, ...rest } of sourcesWithOperations) {
-    const originalString = rest.source.rawSDL!;
-    const operation = operations[0];
+  for (const { operations } of sourcesWithOperations) {
+    for (const operation of operations) {
+      const originalString = formatSdl(operation.definition)
 
-    lines.add(`    ${JSON.stringify(originalString)}: types.${operation.initialName},\n`);
+      lines.add(`    ${JSON.stringify(originalString)}: types.${operation.initialName},\n`);
+    }
   }
 
   lines.add(`};\n`);
@@ -173,19 +175,61 @@ function getGqlOverloadChunk(
 
   // We intentionally don't use a <T extends keyof typeof documents> generic, because TS
   // would print very long `gql` function signatures (duplicating the source).
-  for (const { operations, ...rest } of sourcesWithOperations) {
-    const originalString = rest.source.rawSDL!;
-    const returnType =
-      mode === 'lookup'
-        ? `(typeof documents)[${JSON.stringify(originalString)}]`
-        : emitLegacyCommonJSImports
-        ? `typeof import('./graphql').${operations[0].initialName}`
-        : `typeof import('./graphql.js').${operations[0].initialName}`;
-    lines.add(
-      `/**\n * The ${gqlTagName} function is used to parse GraphQL queries into a document that can be used by GraphQL clients.\n */\n` +
-        `export function ${gqlTagName}(source: ${JSON.stringify(originalString)}): ${returnType};\n`
-    );
+  for (const { operations } of sourcesWithOperations) {
+    for (const operation of operations) {
+      const originalString  = formatSdl(operation.definition)
+
+      const returnType =
+        mode === 'lookup'
+          ? `(typeof documents)[${JSON.stringify(originalString)}]`
+          : emitLegacyCommonJSImports
+          ? `typeof import('./graphql').${operations[0].initialName}`
+          : `typeof import('./graphql.js').${operations[0].initialName}`;
+      lines.add(
+        `/**\n * The ${gqlTagName} function is used to parse GraphQL queries into a document that can be used by GraphQL clients.\n */\n` +
+          `export function ${gqlTagName}(source: ${JSON.stringify(originalString)}): ${returnType};\n`
+      );
+    }
   }
 
   return lines;
+}
+
+const formatSdl = (operationNode: OperationOrFragment['definition']) => {
+  const content = print(operationNode)
+
+  console.log('Before format', content)
+
+  const formatted = prettier.format(content, {
+    parser: 'graphql',
+    // In `gql` block of `.ts` file, there will be extra indentation, so to mimick that, we offset that in `.graphql` file
+    printWidth: 78,
+    tabWidth: 2,
+    useTabs: false,
+    semi: false,
+    singleQuote: true,
+    trailingComma: "all",
+    bracketSpacing: true,
+    bracketSameLine: false
+  })
+
+  console.log('After format', formatted)
+
+  /**
+   * We create new line because of `graphql()`, then add extra indentation
+   */
+  const indented = `${formatted}`
+    .split('\n')
+    .map(line => `  ${line}`)
+    .join('\n')
+    .trim()
+
+  const withExtraIndentation = `\n  ${indented}\n`
+
+  console.log('After extra indent', withExtraIndentation)
+
+  /**
+   * Then create a new line
+   */
+  return withExtraIndentation
 }

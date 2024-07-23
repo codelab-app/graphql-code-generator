@@ -1,6 +1,6 @@
 {
-  "name": "@graphql-codegen/client-preset",
-  "version": "4.3.2",
+  "name": "@codelab-app/client-preset",
+  "version": "4.3.26",
   "description": "GraphQL Code Generator preset for client.",
   "repository": {
     "type": "git",
@@ -23,7 +23,7 @@
     "@graphql-codegen/typed-document-node": "^5.0.9",
     "@graphql-codegen/typescript": "^4.0.9",
     "@graphql-codegen/typescript-operations": "^4.2.3",
-    "@graphql-codegen/gql-tag-operations": "4.0.9",
+    "@codelab-app/gql-tag-operations": "latest",
     "@graphql-codegen/plugin-helpers": "^5.0.4",
     "@graphql-codegen/visitor-plugin-common": "^5.3.1",
     "@graphql-typed-document-node/core": "3.2.0",
